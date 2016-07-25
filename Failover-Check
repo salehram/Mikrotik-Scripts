@@ -1,0 +1,25 @@
+:local pingResultPrimary;
+:local pingResultBackup;
+
+:log info "Initialized script";
+:set pingResultPrimary [/ping 8.8.8.8 count=4 interface=ether3];
+
+:if ($pingResultPrimary=0) do={
+  :log warning "Primary connection is down, switching to backup - Ping result $pingResultPrimary";
+  /ip route set [find comment="Primary"] distance=10 routing-mark="";
+  /ip route set [find comment="Secondary"] distance=1 routing-mark="";
+  :log info "Checking backup connection";
+  :set pingResultBackup [/ping 8.8.8.8 count=4 interface=ether2];
+  if ($pingResultBackup=0) do={
+    :log warning "Backup connection is down! will re-check on primary connection again";
+  }
+  if ($pingResultBackup > 2) do={
+    :log info "Backup connection is up!";
+  }
+}
+
+:if ($pingResultPrimary > 2) do={
+  :log warning "Primary connection is back up!";
+  /ip route set [find comment="Primary"] distance=1 routing-mark="";
+  /ip route set [find comment="Secondary"] distance=10 routing-mark="";
+}
