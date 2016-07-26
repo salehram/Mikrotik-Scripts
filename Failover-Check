@@ -34,16 +34,16 @@
 :set mainRoute "Primary";
 :set backupRoute "Secondary";
 
-:log info "Checking main connection";
+:log info "-----------Checking MAIN connection";
 :set mainPingResult [/ping $primaryIPCheck count=4 interface=$mainConnection];
 :log info $mainPingResult;
 
 :if ($mainPingResult=0) do={
-  :log warning "Primary connection is down, switching to backup - Ping result $mainPingResult";
+  :log warning "-----------Primary connection is down, switching to backup - Ping result $mainPingResult";
   /ip route set [find comment="$mainRoute"] distance=10 routing-mark="";
   /ip route set [find comment="$backupRoute"] distance=1 routing-mark="";
   
-  :log info "Checking backup connection";
+  :log info "-----------Checking backup connection";
   :set backupPingResult [/ping $secondaryIPCheck count=4 interface=$backupConnection];
   if ($backupPingResult=0) do={
     :log warning "Backup connection is down! will re-check on primary connection again";
@@ -54,7 +54,7 @@
 }
 
 :if ($mainPingResult > 2) do={
-  :log warning "Primary connection is back up!";
+  :log info "-----------Primary connection is up!";
   /ip route set [find comment="$mainRoute"] distance=1 routing-mark="";
   /ip route set [find comment="$backupRoute"] distance=10 routing-mark="";
 }
