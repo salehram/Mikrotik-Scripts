@@ -1,25 +1,60 @@
-:local pingResultPrimary;
-:local pingResultBackup;
+# HOW TO USE THE SCRIPT
+#
+# Create 2 static routes to two public known static IP addresses to use as connection check.
+# We will use Google DNS server IP addresses for this. Copy and paste the 2 lines below into terminal
+# Replace x.x.x.x and y.y.y.y with your actual 2 WAN gateways.
+# Note that I assume x.x.x.x is the primary connection, and y.y.y.y is the secondary (backup) connection
+# /ip route add distance=1 dst-address=8.8.8.8 gateway=x.x.x.x
+# /ip route add distance=1 dst-address=8.8.4.4 gateway=y.y.y.y
+#
+# BEFORE EXECUTING SCRIPT, CHANGE VARIABLES
+# mainConnection - Change it to the name of interface of the main internet connection
+# backupConnection - Change it to the name of interface of the secondary internet connection
+# primaryIPCheck - Change it to the IP of the IP address that is going to be pinged to check main connection. THIS HAS TO MATCH THE IP IN THE ROUTING RULES ABOVE
+# secondaryIPCheck - Change it to the IP of the IP address that is going to be pinged to check secondary connection. THIS HAS TO MATCH THE IP IN THE ROUTING RULES ABOVE
+# mainRoute - Change the text to the comment that is on the primary connection route. This will be used to find the route and change it.
+# backupRoute - Change the text to the comment that is on the secondary connection route. This will be used to find the route and change it.
+#
+# After the above changes, you can create a schedule to run the script for example every one minute to make it automatic
+#
+# Now we are ready to execute the script
+:local mainConnection;
+:local backupConnection;
+:local mainPingResult;
+:local backupPingResult;
+:local primaryIPCheck;
+:local secondaryIPCheck;
+:local mainRoute;
+:local backupRoute;
 
-:log info "Initialized script";
-:set pingResultPrimary [/ping 8.8.8.8 count=4 interface=ether3];
+:set mainConnection ether3;
+:set backupConnection ether2;
+:set primaryIPCheck "8.8.8.8";
+:set secondaryIPCheck "8.8.4.4";
+:set mainRoute "Primary";
+:set backupRoute "Secondary";
 
-:if ($pingResultPrimary=0) do={
-  :log warning "Primary connection is down, switching to backup - Ping result $pingResultPrimary";
-  /ip route set [find comment="Primary"] distance=10 routing-mark="";
-  /ip route set [find comment="Secondary"] distance=1 routing-mark="";
+:log info "Checking main connection";
+:set mainPingResult [/ping $primaryIPCheck count=4 interface=$mainConnection];
+:log info $mainPingResult;
+
+:if ($mainPingResult=0) do={
+  :log warning "Primary connection is down, switching to backup - Ping result $mainPingResult";
+  /ip route set [find comment="$mainRoute"] distance=10 routing-mark="";
+  /ip route set [find comment="$backupRoute"] distance=1 routing-mark="";
+  
   :log info "Checking backup connection";
-  :set pingResultBackup [/ping 8.8.8.8 count=4 interface=ether2];
-  if ($pingResultBackup=0) do={
+  :set backupPingResult [/ping $secondaryIPCheck count=4 interface=$backupConnection];
+  if ($backupPingResult=0) do={
     :log warning "Backup connection is down! will re-check on primary connection again";
   }
-  if ($pingResultBackup > 2) do={
+  if ($backupPingResult > 2) do={
     :log info "Backup connection is up!";
   }
 }
 
-:if ($pingResultPrimary > 2) do={
+:if ($mainPingResult > 2) do={
   :log warning "Primary connection is back up!";
-  /ip route set [find comment="Primary"] distance=1 routing-mark="";
-  /ip route set [find comment="Secondary"] distance=10 routing-mark="";
+  /ip route set [find comment="$mainRoute"] distance=1 routing-mark="";
+  /ip route set [find comment="$backupRoute"] distance=10 routing-mark="";
 }
