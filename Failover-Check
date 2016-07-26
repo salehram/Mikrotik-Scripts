@@ -36,7 +36,7 @@
 
 :log info "-----------Checking MAIN connection";
 :set mainPingResult [/ping $primaryIPCheck count=4 interface=$mainConnection];
-:log info $mainPingResult;
+:log info "-----------Ping result $mainPingResult";
 
 :if ($mainPingResult=0) do={
   :log warning "-----------Primary connection is down, switching to backup - Ping result $mainPingResult";
